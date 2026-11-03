@@ -19,27 +19,59 @@ const { Parser } = editor;
 ```
 
 ## Available Events
+* `parse:html` On HTML parse, an object containing the input and the output of the parser is passed as an argument.
 
-*   `parse:html` - On HTML parse, an object containing the input and the output of the parser is passed as an argument
-*   `parse:css` - On CSS parse, an object containing the input and the output of the parser is passed as an argument
+```javascript
+editor.on('parse:html', ({ input, output }) => { ... });
+```
+
+* `parse:html:before` Event triggered before the HTML parsing starts. An object containing the input is passed as an argument.
+
+```javascript
+editor.on('parse:html:before', (options) => {
+  console.log('Parser input', options.input);
+  // You can also process the input and update `options.input`
+  options.input += '<div>Extra content</div>';
+});
+```
+
+* `parse:css` On CSS parse, an object containing the input and the output of the parser is passed as an argument.
+
+```javascript
+editor.on('parse:css', ({ input, output }) => { ... });
+```
+
+* `parse:css:before` Event triggered before the CSS parsing starts. An object containing the input is passed as an argument.
+
+```javascript
+editor.on('parse:css:before', (options) => {
+  console.log('Parser input', options.input);
+  // You can also process the input and update `options.input`
+  options.input += '.my-class { color: red; }';
+});
+```
+
+* `parse` Catch-all event for all the events mentioned above. An object containing all the available data about the triggered event is passed as an argument to the callback.
+
+```javascript
+editor.on('parse', ({ event, ... }) => { ... });
+```
 
 ## Methods
 
 *   [getConfig][2]
 *   [parseHtml][3]
 *   [parseCss][4]
+*   [parseStyle][5]
+*   [addParserCode][6]
+*   [getParserCode][7]
+*   [removeParserCode][8]
 
 ## getConfig
 
-Get the configuration object
+Get configuration object
 
-### Examples
-
-```javascript
-console.log(Parser.getConfig())
-```
-
-Returns **[Object][5]** Configuration object
+Returns **[Object][9]**&#x20;
 
 ## parseHtml
 
@@ -47,12 +79,20 @@ Parse HTML string and return the object containing the Component Definition
 
 ### Parameters
 
-*   `input` **[String][6]** HTML string to parse
-*   `options` **[Object][5]?** Options (optional, default `{}`)
+*   `input` **[String][10]** HTML string to parse
+*   `options` **[Object][9]?** Options (optional, default `{}`)
 
-    *   `options.htmlType` **[String][6]?** [HTML mime type][7] to parse
-    *   `options.allowScripts` **[Boolean][8]** Allow `<script>` tags (optional, default `false`)
-    *   `options.allowUnsafeAttr` **[Boolean][8]** Allow unsafe HTML attributes (eg. `on*` inline event handlers) (optional, default `false`)
+    *   `options.htmlType` **[String][10]?** [HTML mime type][11] to parse
+    *   `options.allowScripts` **[Boolean][12]** Allow `<script>` tags (optional, default `false`)
+    *   `options.allowUnsafeAttr` **[Boolean][12]** Allow unsafe HTML attributes (eg. `on*` inline event handlers) (optional, default `false`)
+    *   `options.allowUnsafeAttrValue` **[Boolean][12]** Allow unsafe HTML attribute values (eg. `src="javascript:..."`) (optional, default `false`)
+    *   `options.keepEmptyTextNodes` **[Boolean][12]** Keep whitespaces regardless of whether they are meaningful (optional, default `false`)
+    *   `options.asDocument` **[Boolean][12]?** Treat the HTML string as document
+    *   `options.detectDocument` **([Boolean][12] | [Function][13])?** Indicate if or how to detect if the HTML string should be treated as document
+    *   `options.parserCode` **[String][10]?** Use a specific parser from the code parser registry. Pass an empty string to force the built-in/legacy parser path.
+    *   `options.preParser` **[Function][13]?** How to pre-process the HTML string before parsing
+    *   `options.convertDataGjsAttributesHyphens` **[Boolean][12]** Convert `data-gjs-*` attributes from hyphenated to camelCase (eg. `data-gjs-my-component` to `data-gjs-myComponent`) (optional, default `false`)
+    *   `options.convertAttributeValues` **([Boolean][12] | [Array][14]<[String][10]> | [Function][13])** Convert regular HTML attribute values using the same parser used by `data-gjs-*` attributes (optional, default `false`)
 
 ### Examples
 
@@ -68,7 +108,7 @@ const resXml = Parser.parseHtml(`<table><div>Hi</div></table>`, {
 // This will preserve the original format as, from the XML point of view, is a valid format
 ```
 
-Returns **[Object][5]** Object containing the result `{ html: ..., css: ... }`
+Returns **[Object][9]** Object containing the result `{ html: ..., css: ... }`
 
 ## parseCss
 
@@ -76,7 +116,7 @@ Parse CSS string and return an array of valid definition objects for CSSRules
 
 ### Parameters
 
-*   `input` **[String][6]** CSS string to parse
+*   `input` **[String][10]** CSS string to parse
 
 ### Examples
 
@@ -85,9 +125,60 @@ const res = Parser.parseCss('.cls { color: red }');
 // [{ ... }]
 ```
 
-Returns **[Array][9]<[Object][5]>** Array containing the result
+Returns **[Array][14]<[Object][9]>** Array containing the result
 
-[1]: https://github.com/artf/grapesjs/blob/master/src/parser/config/config.js
+## parseStyle
+
+Parse style declarations using the native or custom CSS parser.
+
+### Parameters
+
+*   `input` **[String][10]** Style string to parse
+
+### Examples
+
+```javascript
+const style = Parser.parseStyle('color: red; width: 100px');
+// { color: 'red', width: '100px' }
+```
+
+Returns **[Object][9]** Style object
+
+## addParserCode
+
+Add a new HTML code parser to the registry.
+
+### Parameters
+
+*   `id` **[string][10]** Parser ID
+*   `parse` **[Function][13]** Parser function
+*   `options` **[Object][9]** Parser options (optional, default `{}`)
+
+    *   `options.skipSelect` **[Boolean][12]** Avoid selecting the added parser as default (optional, default `false`)
+
+Returns **[Object][9]** Added parser definition
+
+## getParserCode
+
+Get an HTML code parser by id.
+
+### Parameters
+
+*   `id` **[string][10]** Parser ID
+
+Returns **([Object][9] | [undefined][15])** Parser definition
+
+## removeParserCode
+
+Remove an HTML code parser from the registry.
+
+### Parameters
+
+*   `id` **[string][10]** Parser ID
+
+Returns **([Object][9] | [undefined][15])** Removed parser definition
+
+[1]: https://github.com/GrapesJS/grapesjs/blob/master/src/parser/config/config.ts
 
 [2]: #getconfig
 
@@ -95,12 +186,24 @@ Returns **[Array][9]<[Object][5]>** Array containing the result
 
 [4]: #parsecss
 
-[5]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
+[5]: #parsestyle
 
-[6]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+[6]: #addparsercode
 
-[7]: https://developer.mozilla.org/en-US/docs/Web/API/DOMParser/parseFromString#Argument02
+[7]: #getparsercode
 
-[8]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean
+[8]: #removeparsercode
 
-[9]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
+[9]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object
+
+[10]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String
+
+[11]: https://developer.mozilla.org/en-US/docs/Web/API/DOMParser/parseFromString#Argument02
+
+[12]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Boolean
+
+[13]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function
+
+[14]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array
+
+[15]: https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/undefined
